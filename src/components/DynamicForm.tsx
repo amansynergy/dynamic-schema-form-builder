@@ -17,13 +17,21 @@ interface FormField {
   options?: string[];
 }
 
-interface DynamicFormProps {
+interface FormSection {
+  id: string;
+  name: string;
+  label: string;
   fields: FormField[];
+  children?: FormSection[];
+}
+
+interface DynamicFormProps {
+  sections: FormSection[];
   onSubmit: (data: Record<string, any>) => void;
   title?: string;
 }
 
-export const DynamicForm: React.FC<DynamicFormProps> = ({ fields, onSubmit, title = "Create New Entry" }) => {
+export const DynamicForm: React.FC<DynamicFormProps> = ({ sections, onSubmit, title = "Create New Entry" }) => {
   const [formData, setFormData] = useState<Record<string, any>>({});
 
   const handleInputChange = (fieldName: string, value: any) => {
@@ -33,11 +41,64 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({ fields, onSubmit, titl
     }));
   };
 
+  const getAllFields = (sections: FormSection[]): FormField[] => {
+    const fields: FormField[] = [];
+    
+    const extractFields = (sectionList: FormSection[]) => {
+      sectionList.forEach(section => {
+        fields.push(...section.fields);
+        if (section.children) {
+          extractFields(section.children);
+        }
+      });
+    };
+    
+    extractFields(sections);
+    return fields;
+  };
+
+  const createHierarchicalEntry = (data: Record<string, any>) => {
+    // Create the main entry with name and alias_name
+    const mainEntry = {
+      id: Date.now().toString(),
+      name: data.name || "New Item",
+      alias_name: data.alias_name || "Category",
+      child: null
+    };
+
+    // If there are additional fields, create nested structure
+    const otherFields = Object.keys(data).filter(key => key !== 'name' && key !== 'alias_name');
+    
+    if (otherFields.length > 0) {
+      // Create child structure for additional data
+      const childData = otherFields.reduce((acc, key) => {
+        acc[key] = data[key];
+        return acc;
+      }, {} as Record<string, any>);
+
+      // Create a simple child structure
+      mainEntry.child = {
+        alias_name: "Additional Info",
+        value: [
+          {
+            name: "Details",
+            alias_name: "details",
+            data: childData
+          }
+        ]
+      };
+    }
+
+    return mainEntry;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    const allFields = getAllFields(sections);
+    
     // Validate required fields
-    const missingFields = fields
+    const missingFields = allFields
       .filter(field => field.required && !formData[field.name])
       .map(field => field.label);
 
@@ -46,7 +107,8 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({ fields, onSubmit, titl
       return;
     }
 
-    onSubmit(formData);
+    const hierarchicalEntry = createHierarchicalEntry(formData);
+    onSubmit(hierarchicalEntry);
     setFormData({});
   };
 
@@ -104,22 +166,67 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({ fields, onSubmit, titl
     }
   };
 
+  const renderSection = (section: FormSection, level: number = 0): React.ReactNode => {
+    const indentation = level * 20;
+    
+    const getBorderColor = () => {
+      const colors = ['border-blue-200', 'border-green-200', 'border-purple-200', 'border-orange-200'];
+      return colors[level % colors.length];
+    };
+
+    const getBgColor = () => {
+      const colors = ['bg-blue-50', 'bg-green-50', 'bg-purple-50', 'bg-orange-50'];
+      return colors[level % colors.length];
+    };
+
+    return (
+      <div key={section.id} style={{ marginLeft: indentation }} className="space-y-3">
+        {section.fields.length > 0 && (
+          <Card className={`border-2 ${getBorderColor()} ${getBgColor()}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">{section.label}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {section.fields.map((field) => (
+                <div key={field.id}>
+                  <Label htmlFor={field.name} className="flex items-center gap-1">
+                    {field.label}
+                    {field.required && <span className="text-red-500">*</span>}
+                  </Label>
+                  {renderField(field)}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+        
+        {section.children && section.children.map(child => 
+          renderSection(child, level + 1)
+        )}
+      </div>
+    );
+  };
+
+  if (sections.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-12 text-center">
+          <div className="text-gray-500 text-lg">
+            No form template defined yet. Please create a form template in the Form Builder first!
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {fields.map((field) => (
-            <div key={field.id}>
-              <Label htmlFor={field.name} className="flex items-center gap-1">
-                {field.label}
-                {field.required && <span className="text-red-500">*</span>}
-              </Label>
-              {renderField(field)}
-            </div>
-          ))}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {sections.map(section => renderSection(section))}
           
           <Button type="submit" className="w-full">
             <Plus className="h-4 w-4 mr-2" />

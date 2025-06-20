@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { HierarchicalManager } from '@/components/HierarchicalManager';
 import { HierarchicalFormBuilder } from '@/components/HierarchicalFormBuilder';
@@ -75,22 +76,6 @@ const Index = () => {
     }
   ]);
 
-  const getFlatFields = (sections: FormSection[]): FormField[] => {
-    const fields: FormField[] = [];
-    
-    const extractFields = (sectionList: FormSection[]) => {
-      sectionList.forEach(section => {
-        fields.push(...section.fields);
-        if (section.children) {
-          extractFields(section.children);
-        }
-      });
-    };
-    
-    extractFields(sections);
-    return fields;
-  };
-
   const addNewHierarchy = () => {
     const newHierarchy = {
       id: Date.now().toString(),
@@ -109,15 +94,8 @@ const Index = () => {
     setHierarchies(hierarchies.filter(h => h.id !== id));
   };
 
-  const handleFormSubmit = (data: Record<string, any>) => {
-    const newHierarchy = {
-      id: Date.now().toString(),
-      name: data.name || "New Item",
-      alias_name: data.alias_name || "Category",
-      child: null,
-      ...data
-    };
-    setHierarchies([...hierarchies, newHierarchy]);
+  const handleFormSubmit = (hierarchicalEntry: any) => {
+    setHierarchies([...hierarchies, hierarchicalEntry]);
   };
 
   const handleFormSectionsSave = (sections: FormSection[]) => {
@@ -196,7 +174,7 @@ const Index = () => {
 
           <TabsContent value="form">
             <DynamicForm
-              fields={getFlatFields(formSections)}
+              sections={formSections}
               onSubmit={handleFormSubmit}
               title="Create New Hierarchical Entry"
             />
