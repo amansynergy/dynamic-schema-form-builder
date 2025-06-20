@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { HierarchicalManager } from '@/components/HierarchicalManager';
-import { FormBuilder } from '@/components/FormBuilder';
+import { HierarchicalFormBuilder } from '@/components/HierarchicalFormBuilder';
 import { DynamicForm } from '@/components/DynamicForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +14,14 @@ interface FormField {
   type: 'text' | 'number' | 'select' | 'textarea';
   required: boolean;
   options?: string[];
+}
+
+interface FormSection {
+  id: string;
+  name: string;
+  label: string;
+  fields: FormField[];
+  children?: FormSection[];
 }
 
 const Index = () => {
@@ -56,10 +63,33 @@ const Index = () => {
     }
   ]);
 
-  const [formFields, setFormFields] = useState<FormField[]>([
-    { id: '1', name: 'name', label: 'Name', type: 'text', required: true },
-    { id: '2', name: 'alias_name', label: 'Category Type', type: 'text', required: true }
+  const [formSections, setFormSections] = useState<FormSection[]>([
+    {
+      id: '1',
+      name: 'basic_info',
+      label: 'Basic Information',
+      fields: [
+        { id: '1', name: 'name', label: 'Name', type: 'text', required: true },
+        { id: '2', name: 'alias_name', label: 'Category Type', type: 'text', required: true }
+      ]
+    }
   ]);
+
+  const getFlatFields = (sections: FormSection[]): FormField[] => {
+    const fields: FormField[] = [];
+    
+    const extractFields = (sectionList: FormSection[]) => {
+      sectionList.forEach(section => {
+        fields.push(...section.fields);
+        if (section.children) {
+          extractFields(section.children);
+        }
+      });
+    };
+    
+    extractFields(sections);
+    return fields;
+  };
 
   const addNewHierarchy = () => {
     const newHierarchy = {
@@ -90,8 +120,8 @@ const Index = () => {
     setHierarchies([...hierarchies, newHierarchy]);
   };
 
-  const handleFormFieldsSave = (fields: FormField[]) => {
-    setFormFields(fields);
+  const handleFormSectionsSave = (sections: FormSection[]) => {
+    setFormSections(sections);
   };
 
   return (
@@ -102,7 +132,7 @@ const Index = () => {
             Dynamic Hierarchical Data Manager
           </h1>
           <p className="text-lg text-gray-600 mb-6">
-            Create custom forms and manage complex nested data structures for any industry
+            Create custom hierarchical forms and manage complex nested data structures for any industry
           </p>
         </div>
 
@@ -166,16 +196,16 @@ const Index = () => {
 
           <TabsContent value="form">
             <DynamicForm
-              fields={formFields}
+              fields={getFlatFields(formSections)}
               onSubmit={handleFormSubmit}
               title="Create New Hierarchical Entry"
             />
           </TabsContent>
 
           <TabsContent value="builder">
-            <FormBuilder
-              onSave={handleFormFieldsSave}
-              initialFields={formFields}
+            <HierarchicalFormBuilder
+              onSave={handleFormSectionsSave}
+              initialSections={formSections}
             />
           </TabsContent>
         </Tabs>
