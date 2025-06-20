@@ -1,9 +1,21 @@
 
 import React, { useState } from 'react';
 import { HierarchicalManager } from '@/components/HierarchicalManager';
+import { FormBuilder } from '@/components/FormBuilder';
+import { DynamicForm } from '@/components/DynamicForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, Settings, Database } from 'lucide-react';
+
+interface FormField {
+  id: string;
+  name: string;
+  label: string;
+  type: 'text' | 'number' | 'select' | 'textarea';
+  required: boolean;
+  options?: string[];
+}
 
 const Index = () => {
   const [hierarchies, setHierarchies] = useState([
@@ -44,6 +56,11 @@ const Index = () => {
     }
   ]);
 
+  const [formFields, setFormFields] = useState<FormField[]>([
+    { id: '1', name: 'name', label: 'Name', type: 'text', required: true },
+    { id: '2', name: 'alias_name', label: 'Category Type', type: 'text', required: true }
+  ]);
+
   const addNewHierarchy = () => {
     const newHierarchy = {
       id: Date.now().toString(),
@@ -62,6 +79,21 @@ const Index = () => {
     setHierarchies(hierarchies.filter(h => h.id !== id));
   };
 
+  const handleFormSubmit = (data: Record<string, any>) => {
+    const newHierarchy = {
+      id: Date.now().toString(),
+      name: data.name || "New Item",
+      alias_name: data.alias_name || "Category",
+      child: null,
+      ...data
+    };
+    setHierarchies([...hierarchies, newHierarchy]);
+  };
+
+  const handleFormFieldsSave = (fields: FormField[]) => {
+    setFormFields(fields);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-7xl mx-auto">
@@ -70,46 +102,83 @@ const Index = () => {
             Dynamic Hierarchical Data Manager
           </h1>
           <p className="text-lg text-gray-600 mb-6">
-            Manage complex nested data structures for any industry - Automotive, E-commerce, Services & More
+            Create custom forms and manage complex nested data structures for any industry
           </p>
-          
-          <Button 
-            onClick={addNewHierarchy}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl"
-          >
-            <Plus className="mr-2 h-5 w-5" />
-            Add New Hierarchy
-          </Button>
         </div>
 
-        <div className="grid gap-6">
-          {hierarchies.map((hierarchy) => (
-            <Card key={hierarchy.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
-                <CardTitle className="text-xl font-semibold">
-                  {hierarchy.name} ({hierarchy.alias_name})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <HierarchicalManager
-                  data={hierarchy}
-                  onUpdate={(updatedData) => updateHierarchy(hierarchy.id, updatedData)}
-                  onDelete={() => deleteHierarchy(hierarchy.id)}
-                />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Tabs defaultValue="data" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="data" className="flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              Data Management
+            </TabsTrigger>
+            <TabsTrigger value="form" className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Create Entries
+            </TabsTrigger>
+            <TabsTrigger value="builder" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Form Builder
+            </TabsTrigger>
+          </TabsList>
 
-        {hierarchies.length === 0 && (
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardContent className="p-12 text-center">
-              <div className="text-gray-500 text-lg">
-                No hierarchical data yet. Click "Add New Hierarchy" to get started!
-              </div>
-            </CardContent>
-          </Card>
-        )}
+          <TabsContent value="data" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-semibold">Hierarchical Data</h2>
+              <Button 
+                onClick={addNewHierarchy}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Plus className="mr-2 h-5 w-5" />
+                Add New Hierarchy
+              </Button>
+            </div>
+
+            <div className="grid gap-6">
+              {hierarchies.map((hierarchy) => (
+                <Card key={hierarchy.id} className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+                  <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
+                    <CardTitle className="text-xl font-semibold">
+                      {hierarchy.name} ({hierarchy.alias_name})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <HierarchicalManager
+                      data={hierarchy}
+                      onUpdate={(updatedData) => updateHierarchy(hierarchy.id, updatedData)}
+                      onDelete={() => deleteHierarchy(hierarchy.id)}
+                    />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {hierarchies.length === 0 && (
+              <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-12 text-center">
+                  <div className="text-gray-500 text-lg">
+                    No hierarchical data yet. Create entries using the form or click "Add New Hierarchy"!
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="form">
+            <DynamicForm
+              fields={formFields}
+              onSubmit={handleFormSubmit}
+              title="Create New Hierarchical Entry"
+            />
+          </TabsContent>
+
+          <TabsContent value="builder">
+            <FormBuilder
+              onSave={handleFormFieldsSave}
+              initialFields={formFields}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

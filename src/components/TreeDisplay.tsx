@@ -119,7 +119,7 @@ export const TreeDisplay: React.FC<TreeDisplayProps> = ({
           onEdit={onEdit}
           onAddChild={onAddChild}
           onDelete={onDelete}
-          path={[...path, 'child', 'value', index]}
+          path={[...path, 'child', 'value', index.toString()]}
           level={level + 1}
         />
       ))}
